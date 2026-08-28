@@ -1,19 +1,18 @@
 import json
 import glob # ファイルリストを取得
+import datetime
+import re
 
-keep_dir = './Keep'
-# keep_file_path = './keep.json'
-sb_file_path = './scrapbox.json'
+keep_dir = './data_keep'
+sb_file_path = './data_scrapbox/data.json'
+pkm_dir = './data_pkm'
 
 # keep.json を読み込む
 json_files = glob.glob(keep_dir+'/*.json')
-# print(json_files) # debug
+print(len(json_files), 'json files detected.') # debug
 
 # for debug
 cnt = {'trushed':0, 'archived':0, 'textContents':0, 'selected':0}
-
-# タイトルが無いと Scrapbox のインポートでエラー吐く気がするので、No titleはオートインクリメントする。
-AutoIncrement = 0
 
 # keep.json から scrapbox.json に変換する
 sb:json = dict()
@@ -29,24 +28,13 @@ for keep_file_path in json_files:
     if keep['isArchived']:
         cnt['archived'] += 1 # debug
     if not 'textContent' in keep:
+        print(f"empty page ditected. ({keep['title']})")
         continue
     cnt['textContents'] += 1
-    flag = False
-
-    # select content for debug
-    for label in keep.get('labels', []):
-        if label['name'] == '#10思考':
-            flag = True
-    if not flag:
-        continue
-    cnt['selected'] += 1
 
     sb['pages'].append(dict())
     sb_page_json = sb['pages'][-1]
     sb_page_json['title'] = keep['title']
-    if sb_page_json['title'] == '':
-        sb_page_json['title'] = 'AutoIncrement_' + str(AutoIncrement)
-        AutoIncrement += 1
     sb_page_json['created'] = keep['createdTimestampUsec'] // 1000 // 1000
     sb_page_json['updated'] = keep['userEditedTimestampUsec'] // 1000 // 1000
     sb_page_json['lines'] = list()
@@ -68,14 +56,17 @@ for keep_file_path in json_files:
         state_tag_list += '#archived '
     sb_page_json['lines'].append(state_tag_list)
 
+    created_dt = datetime.datetime.fromtimestamp(keep['createdTimestampUsec'] // 1000 // 1000)
+    created_dt_str = f"{created_dt.year:04}{created_dt.month:02}{created_dt.day:02}-{created_dt.hour:02}{created_dt.minute:02}{created_dt.second:02}"
+    invalid_chars = r'[\\/:*?"<>|]'
+    pkm_filename = f"{created_dt_str}_{re.sub(invalid_chars, '_', keep['title'])}"
+    
+    with open(pkm_dir + '/' + pkm_filename, 'w') as f_pkm:
+        f_pkm.write(keep['textContent'])
+
     f_keep.close()
     
 
-# scrapbox.json を書き出す
-f_sb = open(sb_file_path, 'w')
-json.dump(sb, f_sb, indent=1, ensure_ascii=False)
-# endure_ascii=True だと全角文字などがエスケープシーケンスで書かれてしまう。
-# indent=2 にすると改行・インデントして出力される。なしだと1行。
 
 # for debug
 print(json_files.__len__(), 'files')
