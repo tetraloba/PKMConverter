@@ -12,6 +12,6 @@ pyvenv.cfg
 pip-selfcheck.json
 
 references
-Keep
-keep
+data_keep
+data_pkm
 scrapbox.json
