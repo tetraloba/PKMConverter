@@ -1,7 +1,7 @@
 from datetime import datetime
 import re
 
-class page:
+class Page:
     def __init__(self, title: str, createdAt: int, updatedAt: int, tags: list[str], content: str):
         self._title: str = title
         self._createdAt: int = createdAt # [seconds]

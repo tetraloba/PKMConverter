@@ -10,8 +10,12 @@
 pyvenv.cfg
 .venv
 pip-selfcheck.json
+__pycache__
 
 references
 data_keep
+data_scrapbox
 data_pkm
+out_scrapbox
+out_pkm
 scrapbox.json
