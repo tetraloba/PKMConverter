@@ -7,17 +7,21 @@ class CustomEncoder(json.JSONEncoder):
         return super().default(o)
 
 class Page:
-    def __init__(self, title: str, created: int, updated: int, lines: list[str]):
+    def __init__(self, title: str, created: int, updated: int, lines: list[str], id_: str = "", views: int = 0):
         self.title: str = title
         self.created: int = created # [seconds]
         self.updated: int = updated # [seconds]
         self.lines: list[str] = lines
+        self.id: str = id_
+        self.views: int = views
     def from_json(page_json):
         return Page(
             title = page_json['title'],
             created = page_json['created'],
             updated = page_json['updated'],
-            lines = page_json['lines']
+            lines = page_json['lines'],
+            id_ = page_json['id'],
+            views = page_json['views'],
         )
 class Pages:
     def __init__(self, page_list: list[Page] = []):

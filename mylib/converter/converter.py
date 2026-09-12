@@ -18,7 +18,8 @@ def GKMemo2SBPage(memo: GKMemo):
         title = memo.title if len(memo.title) else title_if_empty,
         created = memo.createdTimestampUsec // 1000 // 1000,
         updated = memo.userEditedTimestampUsec // 1000 // 1000,
-        lines = [memo.title] + memo.textContent.split('\n') + [importation_tag, tags, state_tags]
+        lines = [memo.title] + memo.textContent.split('\n') + [importation_tag, tags, state_tags],
+        # id and views in Scrapbox are not in Google Keep. so skipped.
     )
 
 def _get_codeblock_linenums_from_SBPage(sbPage: SBPage):

@@ -16,6 +16,15 @@ class Memo:
         self.userEditedTimestampUsec: int = userEditedTimestampUsec # [microseconds]
         self.textContent: str = textContent # sepalated with \n
     def from_json(memo_json: json):
+        # these attributes are ignored
+        # - textContentHtml
+        # - tasks
+        # - attachments
+        # - annotations
+        # - listContent
+        # for attr in ('tasks', 'attachments', 'annotations', 'listContent'):
+        #     if attr in memo_json.keys():
+        #         print(f"{attr}\n{memo_json[attr]}\n")
         return Memo(
             title = memo_json['title'],
             color = memo_json['color'],
