@@ -1,5 +1,7 @@
 from datetime import datetime
 import re
+from os import path
+import yaml
 
 class Page:
     def __init__(self, title: str, createdAt: int, updatedAt: int, tags: list[str], content: str):
@@ -20,7 +22,10 @@ class Page:
         with open(filepath, 'r') as f:
             #TODO
             pass
-    def dump(self):
-        with open(self._filename, 'w') as f:
-            #TODO
-            pass
+    def dump(self, targetDir: str):
+        with open(path.join(targetDir, self._filename + '.md'), 'w') as f:
+            f.write(f"---\n")
+            # convert createdAt and updatedAt to datetime string #TODO
+            yaml.dump({"title": self._title, "createdAt": self._createdAt, "updatedAt": self._updatedAt, "tags": self._tags}, f, allow_unicode=True, sort_keys=False)
+            f.write(f"---\n")
+            f.write(self._content)
