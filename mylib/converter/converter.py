@@ -33,12 +33,13 @@ def _get_codeblock_linenums_from_SBPage(sbPage: SBPage):
             if len(line) and (line[0] == ' ' or line[0] == '\t'):
                 continue
             else:
-                end = i + 1
+                end = i
                 cbs.append((begin, end))
                 begin = -1
         if line[0:5] == 'code:':
             begin = i
     if begin != -1:
+        if len(sbPage.lines) != i + 1: raise Exception('assertion failed')
         end = i + 1
         cbs.append((begin, end))
     return cbs
