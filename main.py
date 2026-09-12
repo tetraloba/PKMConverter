@@ -1,11 +1,17 @@
 import json
 import glob # ファイルリストを取得
+import logging
 
 from mylib.converter.converter import GKMemo2SBPage
 from mylib.converter.converter import GKMemo
 from mylib.converter.converter import SBPage
 from mylib.converter.converter import SBPages
 from mylib.converter.converter import SBPage2NDPage
+
+LOGFILE = '/dev/stdout'
+LOGLEVEL = logging.INFO
+
+logger = logging.getLogger(__name__)
 
 def gk2sb():
     keep_dir = './data_keep'
@@ -35,18 +41,28 @@ def gk2sb():
 def sb2nd():
     sb_file_path = './data_scrapbox/tetraloba-private.json'
     nd_out_dir = './out_notediscovery'
-    attribute_counter = dict()
+
     with open(sb_file_path, 'r') as f_sb:
         sb_json = json.load(f_sb)
-    for sbpage_json in sb_json['pages']:
-        for attr in sbpage_json.keys():
-            attribute_counter[attr] = attribute_counter.get(attr, 0) + 1
+
+    if logger.isEnabledFor(logging.DEBUG):
+        attribute_counter = dict()
+        for sbpage_json in sb_json['pages']:
+            for attr in sbpage_json.keys():
+                attribute_counter[attr] = attribute_counter.get(attr, 0) + 1
+        logging.debug(attribute_counter)
+
     sbPages = SBPages.from_json(sb_json)
-    for sbPage in sbPages.pages[50:80]:
+    for sbPage in sbPages.pages:
         ndPage = SBPage2NDPage(sbPage)
         ndPage.dump(nd_out_dir)
 
 def main():
+    logging.basicConfig(
+        filename=LOGFILE,
+        level=LOGLEVEL
+    )
+    # gk2sb()
     sb2nd()
 
 if __name__ == '__main__':

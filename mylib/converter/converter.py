@@ -1,10 +1,13 @@
 from datetime import datetime
 import re
+import logging
 
 from mylib.keep.keep import Memo as GKMemo
 from mylib.scrapbox.scrapbox import Page as SBPage
 from mylib.scrapbox.scrapbox import Pages as SBPages
 from mylib.notediscovery.notediscovery import Page as NDPage
+
+logger = logging.getLogger(__name__)
 
 def GKMemo2SBPage(memo: GKMemo):
     created_dt = datetime.fromtimestamp(memo.createdTimestampUsec // 1000 // 1000)
@@ -58,7 +61,7 @@ def _replace_codeblock(sbPage: SBPage):
     cbs = _get_codeblock_linenums_from_SBPage(sbPage)
     lines = sbPage.lines
     for cb in reversed(cbs): # descendding order for insertion
-        print(f"[{cb[0]},{cb[1]})")
+        logger.debug(f"codeblock range: [{cb[0]},{cb[1]})")
         if len(lines) < cb[1]:
             raise IndexError(f"the codeblock [{cb[0]},{cb[1]}) of '{sbPage.title}' is out of range!")
         if len(lines[cb[0]]) < 5 or lines[cb[0]][0:5] != 'code:':
@@ -90,10 +93,10 @@ def _get_tags_from_SBPage(sbPage: SBPage):
         TAG = r'(?:^|\s)(#[^\s]+)' # tag pettern
         tags += re.findall(TAG, line)
 
-    # debug
-    print(f"{sbPage.title}: tags: {tags}")
-    # for tag in tags:
-    #     print(tag)
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f"{sbPage.title}: tags: {tags}")
+        # for tag in tags:
+        #     logger.debug(tag)
 
     return tags
 
