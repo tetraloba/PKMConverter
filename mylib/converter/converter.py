@@ -48,62 +48,54 @@ def _get_codeblock_linenums_from_SBPage(sbPage: SBPage):
         cbs.append((begin, end))
     return cbs
 
-def _replace_codeblock(sbPage: SBPage):
-    """
-    replace codeblock on Scrapbox (code:) style to Markdown (```) style
-    Args:
-        sbPage (SBPage)
-    Returns:
-        lines (list[str])
-    #TODO match the type of Args to Returns
-    #TODO support indented codeblock on Scrapbox
-    """
-    cbs = _get_codeblock_linenums_from_SBPage(sbPage)
-    lines = sbPage.lines
-    for cb in reversed(cbs): # descendding order for insertion
-        logger.debug(f"codeblock range: [{cb[0]},{cb[1]})")
-        if len(lines) < cb[1]:
-            raise IndexError(f"the codeblock [{cb[0]},{cb[1]}) of '{sbPage.title}' is out of range!")
-        if len(lines[cb[0]]) < 5 or lines[cb[0]][0:5] != 'code:':
-            raise RuntimeError(f"the codeblock range [{cb[0]},{cb[1]}) of '{sbPage.title}' is not codeblock!")
-        # replace header
-        lines[cb[0]] = lines[cb[0]].replace('code:', '```')
-        # unindent body
-        for i in range(cb[0] + 1, cb[1]):
-            if len(lines[i]) == 0 or lines[i][0] != ' ' and lines[i][0] != '\t':
-                raise RuntimeError(f"the line ({i}) of '{sbPage.title}' is not codeblock!")
-            lines[i] = lines[i][1:]
-        # insert footer
-        lines.insert(cb[1], '```')
-    return lines
-
-def _get_tags_from_SBPage(sbPage: SBPage):
-    tags = []
-    # except code block #TODO
-    cbs = _get_codeblock_linenums_from_SBPage(sbPage)
-    cbs_i = 0
-    for i, line in enumerate(sbPage.lines):
-        if cbs_i < len(cbs) and cbs[cbs_i][1] <= i:
-            cbs_i += 1
-        if cbs_i < len(cbs) and cbs[cbs_i][1] <= i:
-            raise RuntimeError("codeblock range with same 'end' detected!")
-        if cbs_i < len(cbs) and cbs[cbs_i][0] <= i:
-            # is codeblock
-            continue
-        TAG = r'(?:^|\s)(#[^\s]+)' # tag pettern
-        tags += re.findall(TAG, line)
-
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(f"{sbPage.title}: tags: {tags}")
-        # for tag in tags:
-        #     logger.debug(tag)
-
-    return tags
-
 def SBPage2NDPage(sbPage: SBPage):
-    # WIP
-    # replace code block (code: -> ```) #TODO
-    # 
+    def _replace_codeblock(sbPage: SBPage):
+        """
+        replace codeblock on Scrapbox (code:) style to Markdown (```) style
+        Args:
+            sbPage (SBPage)
+        Returns:
+            lines (list[str])
+        #TODO match the type of Args to Returns
+        #TODO support indented codeblock on Scrapbox
+        """
+        cbs = _get_codeblock_linenums_from_SBPage(sbPage)
+        lines = sbPage.lines
+        for cb in reversed(cbs): # descendding order for insertion
+            logger.debug(f"codeblock range: [{cb[0]},{cb[1]})")
+            if len(lines) < cb[1]:
+                raise IndexError(f"the codeblock [{cb[0]},{cb[1]}) of '{sbPage.title}' is out of range!")
+            if len(lines[cb[0]]) < 5 or lines[cb[0]][0:5] != 'code:':
+                raise RuntimeError(f"the codeblock range [{cb[0]},{cb[1]}) of '{sbPage.title}' is not codeblock!")
+            # replace header
+            lines[cb[0]] = lines[cb[0]].replace('code:', '```')
+            # unindent body
+            for i in range(cb[0] + 1, cb[1]):
+                if len(lines[i]) == 0 or lines[i][0] != ' ' and lines[i][0] != '\t':
+                    raise RuntimeError(f"the line ({i}) of '{sbPage.title}' is not codeblock!")
+                lines[i] = lines[i][1:]
+            # insert footer
+            lines.insert(cb[1], '```')
+        return lines
+    def _get_tags_from_SBPage(sbPage: SBPage):
+        tags = []
+        cbs = _get_codeblock_linenums_from_SBPage(sbPage)
+        cbs_i = 0
+        for i, line in enumerate(sbPage.lines):
+            if cbs_i < len(cbs) and cbs[cbs_i][1] <= i:
+                cbs_i += 1
+            if cbs_i < len(cbs) and cbs[cbs_i][1] <= i:
+                raise RuntimeError("codeblock range with same 'end' detected!")
+            if cbs_i < len(cbs) and cbs[cbs_i][0] <= i:
+                # is codeblock
+                continue
+            TAG = r'(?:^|\s)(#[^\s]+)' # tag pettern
+            tags += re.findall(TAG, line)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"{sbPage.title}: tags: {tags}")
+            # for tag in tags:
+            #     logger.debug(tag)
+        return tags
     return NDPage(
         title = sbPage.title,
         createdAt = sbPage.created,
