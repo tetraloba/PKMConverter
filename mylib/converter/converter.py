@@ -44,6 +44,35 @@ def _get_codeblock_linenums_from_SBPage(sbPage: SBPage):
         cbs.append((begin, end))
     return cbs
 
+def _replace_codeblock(sbPage: SBPage):
+    """
+    replace codeblock on Scrapbox (code:) style to Markdown (```) style
+    Args:
+        sbPage (SBPage)
+    Returns:
+        lines (list[str])
+    #TODO match the type of Args to Returns
+    #TODO support indented codeblock on Scrapbox
+    """
+    cbs = _get_codeblock_linenums_from_SBPage(sbPage)
+    lines = sbPage.lines
+    for cb in reversed(cbs): # descendding order for insertion
+        print(f"[{cb[0]},{cb[1]})")
+        if len(lines) < cb[1]:
+            raise IndexError(f"the codeblock [{cb[0]},{cb[1]}) of '{sbPage.title}' is out of range!")
+        if len(lines[cb[0]]) < 5 or lines[cb[0]][0:5] != 'code:':
+            raise RuntimeError(f"the codeblock range [{cb[0]},{cb[1]}) of '{sbPage.title}' is not codeblock!")
+        # replace header
+        lines[cb[0]] = lines[cb[0]].replace('code:', '```')
+        # unindent body
+        for i in range(cb[0] + 1, cb[1]):
+            if len(lines[i]) == 0 or lines[i][0] != ' ' and lines[i][0] != '\t':
+                raise RuntimeError(f"the line ({i}) of '{sbPage.title}' is not codeblock!")
+            lines[i] = lines[i][1:]
+        # insert footer
+        lines.insert(cb[1], '```')
+    return lines
+
 def _get_tags_from_SBPage(sbPage: SBPage):
     tags = []
     # except code block #TODO
@@ -76,5 +105,5 @@ def SBPage2NDPage(sbPage: SBPage):
         createdAt = sbPage.created,
         updatedAt = sbPage.updated,
         tags = _get_tags_from_SBPage(sbPage),
-        content = "\n".join(sbPage.lines[1:])
+        content = "\n".join(_replace_codeblock(sbPage)[1:])
     )
