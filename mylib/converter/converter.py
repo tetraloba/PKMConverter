@@ -1,5 +1,6 @@
 from datetime import datetime
 import re
+import copy
 import logging
 
 from mylib.keep.keep import Memo as GKMemo
@@ -48,17 +49,59 @@ def _get_codeblock_linenums_from_SBPage(sbPage: SBPage):
         cbs.append((begin, end))
     return cbs
 
-def SBPage2NDPage(sbPage: SBPage):
-    def _replace_codeblock(sbPage: SBPage):
+def SBPage2NDPage(sbPage: SBPage, title2sbpageFilename: dict):
+    def _replace_link(sbPage: SBPage, linkStyle: str = 'wiki') -> SBPage:
+        """
+        Args:
+            sbPage (SBPage): immutable (Changes will be applyed to deep copied object.)
+            linkStyle (str): 'wiki' (Wikilink, default. `[[filename]]`) or 'md' (Markdown Link. `[title](filepath)`)
+        Returns:
+            sbPage (SBPage): link replaced.
+        #TODO support subdirectory in LinkStyle 'md'.
+        """
+        sbPage = copy.deepcopy(sbPage) # the Arg `sbPage` should be immutable.
+        links = [] # for debug
+        cbs = _get_codeblock_linenums_from_SBPage(sbPage)
+        cbs_i = 0
+        for i, line in enumerate(sbPage.lines):
+            if cbs_i < len(cbs) and cbs[cbs_i][1] <= i:
+                cbs_i += 1
+            if cbs_i < len(cbs) and cbs[cbs_i][1] <= i:
+                raise RuntimeError("codeblock range with same 'end' detected!")
+            if cbs_i < len(cbs) and cbs[cbs_i][0] <= i:
+                # is codeblock
+                continue
+            LINK = r'\[[^[\]]*\]' # link pettern (on Scrapbox)
+            line_links = re.findall(LINK, line)
+            for link in line_links:
+                filename = title2sbpageFilename.get(link[1:-1], None)
+                if filename == None:
+                    logger.info(f"the link ({link[1:-1]}) destination not found.")
+                    continue
+                if linkStyle == 'wiki':
+                    sbPage.lines[i] = line.replace(link, f"[[{filename}]]")
+                elif linkStyle == 'md':
+                    #TODO support filepath (subdirectory).
+                    sbPage.lines[i] = line.replace(link, f"{link}(./{filename})")
+                else:
+                    raise ValueError(f"linkStyle ({linkStyle}) not found!")
+            links += line_links # for debug
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"{sbPage.title}")
+            for link in links:
+                logger.info(link)
+            logger.debug("")
+        return sbPage
+    def _replace_codeblock(sbPage: SBPage) -> SBPage:
         """
         replace codeblock on Scrapbox (code:) style to Markdown (```) style
         Args:
-            sbPage (SBPage)
+            sbPage (SBPage): immutable (Changes will be applyed to deep copied object.)
         Returns:
-            lines (list[str])
-        #TODO match the type of Args to Returns
+            sbPage (SBPage): code block replaced.
         #TODO support indented codeblock on Scrapbox
         """
+        sbPage = copy.deepcopy(sbPage) # the Arg `sbPage` should be immutable.
         cbs = _get_codeblock_linenums_from_SBPage(sbPage)
         lines = sbPage.lines
         for cb in reversed(cbs): # descendding order for insertion
@@ -76,7 +119,7 @@ def SBPage2NDPage(sbPage: SBPage):
                 lines[i] = lines[i][1:]
             # insert footer
             lines.insert(cb[1], '```')
-        return lines
+        return sbPage
     def _get_tags_from_SBPage(sbPage: SBPage):
         tags = []
         cbs = _get_codeblock_linenums_from_SBPage(sbPage)
@@ -98,7 +141,7 @@ def SBPage2NDPage(sbPage: SBPage):
         tags = [tag[1:] for tag in tags] # remove '#'
         return tags
     tags = _get_tags_from_SBPage(sbPage) + ['importedFromScrapbox']
-    content = "\n".join(_replace_codeblock(sbPage)[1:]) + '\n#importedFromScrapbox\n'
+    content = "\n".join(_replace_codeblock(_replace_link(sbPage, 'wiki')).lines[1:]) + '\n#importedFromScrapbox\n'
     return NDPage(
         title = sbPage.title,
         created = sbPage.created,
@@ -106,3 +149,12 @@ def SBPage2NDPage(sbPage: SBPage):
         tags = tags,
         content = content,
     )
+
+def SBPages2NDPages(sbPages: SBPages, nd_out_dir: str):
+    title2sbpageFilename = dict()
+    for sbPage in sbPages.pages:
+        title2sbpageFilename[sbPage.title] = NDPage.generate_filename(sbPage.title, sbPage.created)
+    logger.debug(f"title2sbpageFilename: {title2sbpageFilename}")
+    for sbPage in sbPages.pages:
+        ndPage = SBPage2NDPage(sbPage, title2sbpageFilename)
+        ndPage.dump(nd_out_dir)

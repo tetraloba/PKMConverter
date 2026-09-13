@@ -4,9 +4,8 @@ import logging
 
 from mylib.converter.converter import GKMemo2SBPage
 from mylib.converter.converter import GKMemo
-from mylib.converter.converter import SBPage
 from mylib.converter.converter import SBPages
-from mylib.converter.converter import SBPage2NDPage
+from mylib.converter.converter import SBPages2NDPages
 
 LOGFILE = '/dev/stdout'
 LOGLEVEL = logging.INFO
@@ -53,9 +52,7 @@ def sb2nd():
         logging.debug(attribute_counter)
 
     sbPages = SBPages.from_json(sb_json)
-    for sbPage in sbPages.pages:
-        ndPage = SBPage2NDPage(sbPage)
-        ndPage.dump(nd_out_dir)
+    SBPages2NDPages(sbPages, nd_out_dir)
 
 def main():
     logging.basicConfig(
