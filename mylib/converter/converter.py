@@ -95,11 +95,14 @@ def SBPage2NDPage(sbPage: SBPage):
             logger.debug(f"{sbPage.title}: tags: {tags}")
             # for tag in tags:
             #     logger.debug(tag)
+        tags = [tag[1:] for tag in tags] # remove '#'
         return tags
+    tags = _get_tags_from_SBPage(sbPage) + ['importedFromScrapbox']
+    content = "\n".join(_replace_codeblock(sbPage)[1:]) + '\n#importedFromScrapbox\n'
     return NDPage(
         title = sbPage.title,
-        createdAt = sbPage.created,
-        updatedAt = sbPage.updated,
-        tags = _get_tags_from_SBPage(sbPage),
-        content = "\n".join(_replace_codeblock(sbPage)[1:])
+        created = sbPage.created,
+        updated = sbPage.updated,
+        tags = tags,
+        content = content,
     )
