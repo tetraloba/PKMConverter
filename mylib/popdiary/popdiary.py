@@ -50,6 +50,7 @@ class Diary:
         self.photograph_11: str = photograph_11
         self.star: str = star
         self.bgcolor: str = bgcolor
+        self.notes: str = notes
     def from_json(diary_json: json, diary_category: dict, diary_emotion: dict):
         if (
             # diary_json['note_02'] or diary_json['note_03'] or diary_json['note_04'] or
@@ -96,7 +97,8 @@ class Diary:
             logger.info(f"star: {diary_json['star']} on {diary_json['id']}, {diary_json['title']}")
         if diary_json['bgcolor'] != 'white':
             logger.info(f"bgcolor: {diary_json['bgcolor']} on {diary_json['id']}, {diary_json['title']}")
-        # check if 'notes' exist and different from note_01 #TODO
+        if diary_json['notes']:
+            logger.debug(f"notes detected on {diary_json['id']}, {diary_json['title']}")
         return Diary(
             id = diary_json['id'],
             year = diary_json['year'],
@@ -131,6 +133,7 @@ class Diary:
             photograph_11 = diary_json['photograph_11'],
             star = diary_json['star'],
             bgcolor = diary_json['bgcolor'],
+            notes = diary_json['notes'],
         )
     def get_note_list(self):
         return [

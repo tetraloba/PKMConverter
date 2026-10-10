@@ -21,35 +21,40 @@ def TP2NDPage():
     """
 
 deleted_tags = set()
+def _html2str(html_str: str) -> str:
+    HTML_TAG = r'<.*?>'
+    HTML_BR = r'<br>'
+
+    for html_tag in re.findall(HTML_TAG, html_str):
+        deleted_tags.add(html_tag)
+    # replace '<br>' to '\n'
+    noBR_str = re.sub(HTML_BR, '\n', html_str)
+    # remove HTML tag
+    # (e.g. '<html>', '<br>', '<body>', '<span style="color:#4A4A4A;">', '</span>', '</html>', '<p>', '</p>', '</body>')
+    untagged_str = re.sub(HTML_TAG, '', noBR_str)
+    # unescape HTML escaped char (e.g. '&nbsp;', '&amp;')
+    unescaped_str = html.unescape(untagged_str)
+    # replace NBSP (0xa0) to ' ' (0x20)
+    noNBSP_str = unescaped_str.replace(chr(0xa0), ' ')
+    return noNBSP_str
 def PDDiary2NDPage(pdDiary: PDDiary):
     title = pdDiary.title
 
     # merge content. (photograph_01, note_01, photograph_02, note_02, ..., photograph_11, note_11)
-    merged_content = ''
+    content_list = []
     for photograph, note in zip(pdDiary.get_photograph_list(), pdDiary.get_note_list()):
         if photograph:
-            merged_content += f"\n![{photograph}]({photograph})"
+            content_list.append(f"![{photograph}]({photograph})")
         if note:
-            merged_content += '\n' + note
-    merged_content += '\n'
+            content_list.append(note)
+    content = '\n'.join(content_list) + '\n'
 
-    # remove HTML tags from title and content.
-    # (e.g. '<html>', '<br>', '<body>', '<span style="color:#4A4A4A;">', '</span>', '</html>', '<p>', '</p>', '</body>')
-    HTML_TAG = r'<.*?>'
-    HTML_BR = r'<br>'
+    # convert title and content from HTML to plain text
+    title = _html2str(title)
+    # logger.debug(title)
+    content = _html2str(content)
 
-    for html_tag_in_title in re.findall(HTML_TAG, title):
-        deleted_tags.add(html_tag_in_title)
-    untagged_title = re.sub(HTML_TAG, '', title)
-    untagged_title = '' if untagged_title == '(題名なし)' else untagged_title
-    unescaped_title = html.unescape(untagged_title)
-    # logger.debug(untagged_title)
-
-    for html_tag_in_content in re.findall(HTML_TAG, merged_content):
-        deleted_tags.add(html_tag_in_content)
-    untagged_merged_content = re.sub(HTML_BR, '\n', merged_content)
-    untagged_merged_content = re.sub(HTML_TAG, '', untagged_merged_content)
-    unescaped_content = html.unescape(untagged_merged_content)
+    title = '' if title == '(題名なし)' else title
 
     # timestamp
     created_timestamp = datetime(
@@ -71,12 +76,35 @@ def PDDiary2NDPage(pdDiary: PDDiary):
     if pdDiary.bgcolor != PDDiary.DEFAULT_BGCOLOR:
         tags.append('bg_' + pdDiary.bgcolor)
 
+    if pdDiary.notes:
+        """
+        JUST ASSERT that (title, content) from (`.title`, `.note_*`) and (title, content) from `.notes` is equal
+        """
+        # `.notes` (:str) format is '<title>〔∵〕―<content>――――――――――'
+        match = re.match(r'(.*)〔∵〕―((.|\s)*)――――――――――', pdDiary.notes)
+        notes_title = '' if match.group(1) == '(題名なし)' else match.group(1)
+        notes_title = notes_title.replace(chr(0xa0), ' ') # replace NBSP to ' '
+        notes_content = match.group(2) + '\n'
+        notes_content = notes_content.replace(chr(0xa0), ' ') # replace NBSP to ' '
+
+        if notes_title != title:
+            logger.debug(f"notes_title: {notes_title}\ntitle: {title}")
+            for i, (notes_c, c) in enumerate(zip(notes_title, title)):
+                if notes_c != c:
+                    logger.debug(f"(char {i}) {notes_c}({hex(ord(notes_c))}) <-> {c}({hex(ord(c))})")
+            raise AssertionError
+        if notes_content != content:
+            logger.debug(f"difference between notes_content and content on {title}")
+            for i, (notes_c, c) in enumerate(zip(notes_content, content)):
+                if notes_c != c:
+                    logger.debug(f"(char {i}) {notes_c}({hex(ord(notes_c))}) <-> {c}({hex(ord(c))})")
+            raise AssertionError
     return NDPage(
-        title = unescaped_title,
+        title = title,
         created = created_timestamp,
         updated = created_timestamp,
         tags = tags,
-        content = unescaped_content
+        content = content
     )
 def PDDiaries2NDPages(pdDiaries: PDDiaries, nd_out_dir: str):
     for pdDiary in pdDiaries.diaries:
