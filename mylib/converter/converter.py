@@ -75,6 +75,7 @@ def PDDiary2NDPage(pdDiary: PDDiary):
         tags.append('stared')
     if pdDiary.bgcolor != PDDiary.DEFAULT_BGCOLOR:
         tags.append('bg_' + pdDiary.bgcolor)
+    tags.append('importedFromPOPdiary')
 
     if pdDiary.notes:
         """
