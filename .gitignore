@@ -13,10 +13,12 @@ pip-selfcheck.json
 __pycache__
 
 references
+data_popdiary
 data_keep
 data_scrapbox
 data_pkm
 out_scrapbox
 out_pkm
-out_notediscovery
+out_notediscovery_from_scrapbox
+out_notediscovery_from_popdiary
 scrapbox.json

@@ -1,14 +1,88 @@
 from datetime import datetime
 import re
+import html
 import copy
 import logging
 
+from mylib.popdiary.popdiary import Diary as PDDiary
+from mylib.popdiary.popdiary import Diaries as PDDiaries
 from mylib.keep.keep import Memo as GKMemo
 from mylib.scrapbox.scrapbox import Page as SBPage
 from mylib.scrapbox.scrapbox import Pages as SBPages
 from mylib.notediscovery.notediscovery import Page as NDPage
 
 logger = logging.getLogger(__name__)
+
+def TP2NDPage():
+    raise NotImplementedError
+    """
+    #!/bin/bash
+    find . -maxdepth 1 -type f -name '*.md' | sort | xargs -I{} bash -c 'SRC="{}"; mv "${SRC}" "20${SRC:2:6}-${SRC:8:6}_$(head -n 2 {} | tail -n 1 | grep -Po "(?<=^title: \").*(?=\")" {}).md"'
+    """
+
+deleted_tags = set()
+def PDDiary2NDPage(pdDiary: PDDiary):
+    title = pdDiary.title
+
+    # merge content. (photograph_01, note_01, photograph_02, note_02, ..., photograph_11, note_11)
+    merged_content = ''
+    for photograph, note in zip(pdDiary.get_photograph_list(), pdDiary.get_note_list()):
+        if photograph:
+            merged_content += f"\n![{photograph}]({photograph})"
+        if note:
+            merged_content += '\n' + note
+    merged_content += '\n'
+
+    # remove HTML tags from title and content.
+    # (e.g. '<html>', '<br>', '<body>', '<span style="color:#4A4A4A;">', '</span>', '</html>', '<p>', '</p>', '</body>')
+    HTML_TAG = r'<.*?>'
+    HTML_BR = r'<br>'
+
+    for html_tag_in_title in re.findall(HTML_TAG, title):
+        deleted_tags.add(html_tag_in_title)
+    untagged_title = re.sub(HTML_TAG, '', title)
+    untagged_title = '' if untagged_title == '(題名なし)' else untagged_title
+    unescaped_title = html.unescape(untagged_title)
+    # logger.debug(untagged_title)
+
+    for html_tag_in_content in re.findall(HTML_TAG, merged_content):
+        deleted_tags.add(html_tag_in_content)
+    untagged_merged_content = re.sub(HTML_BR, '\n', merged_content)
+    untagged_merged_content = re.sub(HTML_TAG, '', untagged_merged_content)
+    unescaped_content = html.unescape(untagged_merged_content)
+
+    # timestamp
+    created_timestamp = datetime(
+        year=int(pdDiary.year),
+        month=int(pdDiary.month),
+        day=int(pdDiary.day),
+        hour=int(pdDiary.time.split(':')[0]),
+        minute=int(pdDiary.time.split(':')[1])
+    ).timestamp()
+
+    # tags
+    tags = []
+    if pdDiary.category != PDDiary.DEFAULT_CATEGORY:
+        tags.append(pdDiary.category)
+    if pdDiary.emotion != PDDiary.DEFAULT_EMOTION:
+        tags.append(pdDiary.emotion)
+    if pdDiary.star != PDDiary.DEFAULT_STAR:
+        tags.append('stared')
+    if pdDiary.bgcolor != PDDiary.DEFAULT_BGCOLOR:
+        tags.append('bg_' + pdDiary.bgcolor)
+
+    return NDPage(
+        title = unescaped_title,
+        created = created_timestamp,
+        updated = created_timestamp,
+        tags = tags,
+        content = unescaped_content
+    )
+def PDDiaries2NDPages(pdDiaries: PDDiaries, nd_out_dir: str):
+    for pdDiary in pdDiaries.diaries:
+        ndPage = PDDiary2NDPage(pdDiary)
+        ndPage.dump(nd_out_dir)
+    logger.debug(f"deleted_tags: {deleted_tags}")
 
 def GKMemo2SBPage(memo: GKMemo):
     created_dt = datetime.fromtimestamp(memo.createdTimestampUsec // 1000 // 1000)
